@@ -2023,6 +2023,20 @@ static void gen_ldstub(DisasContext *dc, TCGv dst, TCGv addr, int mmu_idx)
     tcg_temp_free(m1);
 }
 
+#if defined(CONFIG_USER_ONLY)
+static void gen_cas_user(DisasContext *dc, TCGv addr, TCGv cmpv,
+                        int insn, int rd)
+{
+    TCGv oldv;
+
+    oldv = tcg_temp_new();
+    tcg_gen_atomic_cmpxchg_tl(oldv, addr, cmpv, gen_load_gpr(dc, rd),
+                                MMU_USER_IDX, MO_TEUL);
+    gen_store_gpr(dc, rd, oldv);
+    tcg_temp_free(oldv);
+}
+#endif
+
 /* asi moves */
 #if !defined(CONFIG_USER_ONLY) || defined(TARGET_SPARC64)
 typedef enum {
@@ -5727,6 +5741,13 @@ static void disas_sparc_insn(DisasContext * dc, unsigned int insn)
                 case 0x36: /* stdcq */
                 case 0x37: /* stdc */
                     goto ncp_insn;
+#endif
+#if defined(CONFIG_USER_ONLY)
+                case 0x3c:
+                    rs2 = GET_FIELD(insn, 27, 31);
+                    cpu_src2 = gen_load_gpr(dc, rs2);
+                    gen_cas_user(dc, cpu_addr, cpu_src2, insn, rd);
+                    break;
 #endif
 #if !defined(CONFIG_USER_ONLY) || defined(TARGET_SPARC64)
                 case 0x3c: /* V9 or LEON3 casa */
