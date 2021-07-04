@@ -557,6 +557,11 @@ static const char * const feature_name[] = {
     "hypv",
     "cmt",
     "gl",
+    "ta0",
+    "asr17",
+    "cachectrl",
+    "powerdown",
+    "casa"
 };
 
 static void print_features(uint32_t features, const char *prefix)
