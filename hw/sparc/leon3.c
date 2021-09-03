@@ -305,7 +305,13 @@ static void leon3_generic_hw_init(MachineState *machine)
     }
 
     if (bios_size > 0) {
-        ret = load_image_targphys(filename, LEON3_PROM_OFFSET, bios_size);
+        ret = load_elf(filename, NULL, NULL, NULL,
+                       NULL, NULL, NULL, NULL,
+                       1 /* big endian */, EM_SPARC, 0, 0);
+        if (ret > 0)
+            bios_size = ret;
+        else
+            ret = load_image_targphys(filename, LEON3_PROM_OFFSET, bios_size);
         if (ret < 0 || ret > prom_size) {
             error_report("could not load prom '%s'", filename);
             exit(1);
