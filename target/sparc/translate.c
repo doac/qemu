@@ -2077,9 +2077,11 @@ static DisasASI get_asi(DisasContext *dc, int insn, MemOp memop)
                    && (dc->def->features & CPU_FEATURE_CASA))) {
         switch (asi) {
         case ASI_USERDATA:   /* User data access */
-            mem_idx = MMU_USER_IDX;
+            if (!(dc->def->features & CPU_FEATURE_CASA))
+                mem_idx = MMU_USER_IDX;
             type = GET_ASI_DIRECT;
             break;
+        case ASI_LEON_NOCACHE:
         case ASI_KERNELDATA: /* Supervisor data access */
             mem_idx = MMU_KERNEL_IDX;
             type = GET_ASI_DIRECT;
