@@ -286,7 +286,7 @@ static void leon3_generic_hw_init(MachineState *machine)
                                 machine->ram);
 
     /* Allocate BIOS */
-    prom_size = 8 * MiB;
+    prom_size = 32 * MiB;
     memory_region_init_rom(prom, NULL, "Leon3.bios", prom_size, &error_fatal);
     memory_region_add_subregion(address_space_mem, LEON3_PROM_OFFSET, prom);
 
