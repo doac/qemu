@@ -62,6 +62,9 @@
 #define LEON3_TIMER_IRQ    (6)
 #define LEON3_TIMER_COUNT  (2)
 
+#define LEON3_GRETH_OFFSET (0x80000e00)
+#define LEON3_GRETH_IRQ    (12)
+
 #define LEON3_APB_PNP_OFFSET (0x800FF000)
 #define LEON3_AHB_PNP_OFFSET (0xFFFFF000)
 
@@ -397,6 +400,17 @@ static void leon3_generic_hw_init(MachineState *machine)
     grlib_apb_pnp_add_entry(apb_pnp, LEON3_UART_OFFSET, 0xFFF,
                             GRLIB_VENDOR_GAISLER, GRLIB_APBUART_DEV, 1,
                             LEON3_UART_IRQ, GRLIB_APBIO_AREA);
+
+    /* Allocate greth */
+    dev = qdev_new(TYPE_GRLIB_GRETH);
+    sysbus_realize_and_unref(SYS_BUS_DEVICE(dev), &error_fatal);
+    sysbus_mmio_map(SYS_BUS_DEVICE(dev), 0, LEON3_GRETH_OFFSET);
+    sysbus_connect_irq(SYS_BUS_DEVICE(dev), 0,
+                       qdev_get_gpio_in(irqmpdev, LEON3_GRETH_IRQ));
+
+    grlib_apb_pnp_add_entry(apb_pnp, LEON3_GRETH_OFFSET, 0xFF,
+                            GRLIB_VENDOR_GAISLER, GRLIB_GRETH_DEV, 0,
+                            LEON3_GRETH_IRQ, GRLIB_APBIO_AREA);
 }
 
 static void leon3_generic_machine_init(MachineClass *mc)

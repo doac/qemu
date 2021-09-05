@@ -42,4 +42,7 @@ void grlib_irqmp_ack(DeviceState *dev, int intno, int cpu_index);
 /* APB UART */
 #define TYPE_GRLIB_APB_UART "grlib-apbuart"
 
+/* GRETH */
+#define TYPE_GRLIB_GRETH "grlib-greth"
+
 #endif /* GRLIB_H */
