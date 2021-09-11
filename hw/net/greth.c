@@ -82,6 +82,12 @@ static uint64_t greth_read(void *opaque, hwaddr offset, unsigned size)
     switch (offset) {
     case 0x00:
         return s->ctrl;
+    case 0x08: /* MAC MSB */
+        return s->conf.macaddr.a[4] | (s->conf.macaddr.a[5] << 8);
+    case 0x0c: /* MAC LSB */
+        return s->conf.macaddr.a[0] | (s->conf.macaddr.a[1] << 8)
+            | (s->conf.macaddr.a[2] << 16)
+            | ((uint32_t)s->conf.macaddr.a[3] << 24);
     case 0x10: /* MDIO */
         return s->mdio;
     default:
@@ -99,6 +105,16 @@ static void greth_write(void *opaque, hwaddr offset, uint64_t value,
     switch (offset) {
     case 0x00:
         printf("Writing reg 0\n");
+        break;
+    case 0x08: /* MAC MSB */
+        s->conf.macaddr.a[4] = value;
+        s->conf.macaddr.a[5] = value >> 8;
+        break;
+    case 0x0c: /* MAC LSB */
+        s->conf.macaddr.a[0] = value;
+        s->conf.macaddr.a[1] = value >> 8;
+        s->conf.macaddr.a[2] = value >> 16;
+        s->conf.macaddr.a[3] = value >> 24;
         break;
     case 0x10: /* MDIO */
         greth_mdio(s, value);
