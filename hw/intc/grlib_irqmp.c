@@ -62,7 +62,7 @@ struct IRQMP {
     MemoryRegion iomem;
 
     IRQMPState *state;
-    qemu_irq irq;
+    qemu_irq irq[IRQMP_MAX_CPU];
 };
 
 struct IRQMPState {
@@ -80,6 +80,7 @@ struct IRQMPState {
 
 static void grlib_irqmp_check_irqs(IRQMPState *state)
 {
+    CPUState     *cs;
     uint32_t      pend   = 0;
     uint32_t      level0 = 0;
     uint32_t      level1 = 0;
@@ -87,18 +88,21 @@ static void grlib_irqmp_check_irqs(IRQMPState *state)
     assert(state != NULL);
     assert(state->parent != NULL);
 
-    /* IRQ for CPU 0 (no SMP support) */
-    pend = (state->pending | state->force[0])
-        & state->mask[0];
+    CPU_FOREACH(cs) {
 
-    level0 = pend & ~state->level;
-    level1 = pend &  state->level;
+        /* IRQ for CPU */
+        pend = (state->pending | state->force[cs->cpu_index])
+            & state->mask[cs->cpu_index];
 
-    trace_grlib_irqmp_check_irqs(state->pending, state->force[0],
-                                 state->mask[0], level1, level0);
+        level0 = pend & ~state->level;
+        level1 = pend &  state->level;
 
-    /* Trigger level1 interrupt first and level0 if there is no level1 */
-    qemu_set_irq(state->parent->irq, level1 ?: level0);
+        trace_grlib_irqmp_check_irqs(state->pending, state->force[cs->cpu_index],
+                                    state->mask[cs->cpu_index], level1, level0);
+
+        /* Trigger level1 interrupt first and level0 if there is no level1 */
+        qemu_set_irq(state->parent->irq[cs->cpu_index], level1 ?: level0);
+    }
 }
 
 static void grlib_irqmp_ack_mask(IRQMPState *state, uint32_t mask)
@@ -362,7 +366,7 @@ static void grlib_irqmp_init(Object *obj)
     SysBusDevice *dev = SYS_BUS_DEVICE(obj);
 
     qdev_init_gpio_in(DEVICE(obj), grlib_irqmp_set_irq, MAX_PILS);
-    qdev_init_gpio_out_named(DEVICE(obj), &irqmp->irq, "grlib-irq", 1);
+    qdev_init_gpio_out_named(DEVICE(obj), irqmp->irq, "grlib-irq", IRQMP_MAX_CPU);
     memory_region_init_io(&irqmp->iomem, obj, &grlib_irqmp_ops, irqmp,
                           "irqmp", IRQMP_REG_SIZE);
 
