@@ -10,6 +10,7 @@
 #include "net/net.h"
 #include "qemu/log.h"
 #include "qemu/module.h"
+#include "exec/address-spaces.h"
 #include <zlib.h>
 #include "qom/object.h"
 
@@ -25,10 +26,16 @@ struct grethState {
     uint32_t txdesc;
     uint32_t rxdesc;
 
+    uint8_t tx_buffer[0x800];
+
     NICState *nic;
     NICConf conf;
     qemu_irq irq;
     MemoryRegion mmio;
+
+    /* Memory access */
+    MemoryRegion *dma_mr;
+    AddressSpace as;
 };
 
 static bool greth_can_receive(NetClientState *nc)
@@ -46,6 +53,59 @@ static ssize_t greth_receive(NetClientState *nc, const uint8_t *buf,
     (void)s;
 
     return 0;
+}
+
+static void greth_ctrl(grethState *s, uint64_t value)
+{
+    NetClientState *nc = qemu_get_queue(s->nic);
+    uint32_t descriptor[2];
+    uint32_t zero = 0;
+    bool packet_sent = 0;
+
+    s->ctrl = value & 0x1bf;
+    /* GBit MAC Available */
+    s->ctrl |= (1 << 27);
+
+    if ((s->ctrl & 1) == 0)
+        return;
+
+    while (1) {
+        address_space_read(&s->as, s->txdesc, MEMTXATTRS_UNSPECIFIED,
+                           descriptor, 8);
+
+        descriptor[0] = be32_to_cpu(descriptor[0]);
+        descriptor[1] = be32_to_cpu(descriptor[1]);
+
+        /* Stop when next descriptor is disabled */
+        if ((descriptor[0] & (1<<11)) == 0) {
+            break;
+        }
+
+        address_space_read(&s->as, descriptor[1], MEMTXATTRS_UNSPECIFIED,
+                           s->tx_buffer, descriptor[0] & 0x7ff);
+
+        qemu_send_packet(nc, s->tx_buffer, descriptor[0] & 0x7ff);
+
+        address_space_write(&s->as, s->txdesc, MEMTXATTRS_UNSPECIFIED,
+                            &zero, 4);
+
+        /* Wrap? */
+        if (descriptor[0] & (1 << 12))
+            s->txdesc = s->txdesc & ~0x3ff;
+        else
+            s->txdesc = (s->txdesc & ~0x3ff) | ((s->txdesc + 8) & 0x3ff);
+
+        packet_sent = 1;
+
+        break;
+    }
+
+    if (packet_sent) {
+        s->status |= 0x8;
+
+        if (s->ctrl & 4)
+            qemu_set_irq(s->irq, 1);
+    }
 }
 
 static void greth_mdio(grethState *s, uint64_t value)
@@ -119,7 +179,7 @@ static void greth_write(void *opaque, hwaddr offset, uint64_t value,
 
     switch (offset) {
     case 0x00:
-        printf("Writing reg 0\n");
+        greth_ctrl(s, value);
         break;
     case 0x04:
         s->status &= ~value;
@@ -172,6 +232,8 @@ static void greth_realize(DeviceState *dev, Error **errp)
 {
     SysBusDevice *sbd = SYS_BUS_DEVICE(dev);
     grethState *s = GRETH(dev);
+
+    address_space_init(&s->as, get_system_memory(), "greth");
 
     memory_region_init_io(&s->mmio, OBJECT(s), &greth_ops, s,
                           "grlib-greth", 0x100);
