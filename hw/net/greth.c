@@ -20,6 +20,7 @@ struct grethState {
     SysBusDevice parent_obj;
 
     uint32_t ctrl;
+    uint32_t status;
     uint32_t mdio;
     uint32_t txdesc;
     uint32_t rxdesc;
@@ -84,6 +85,8 @@ static uint64_t greth_read(void *opaque, hwaddr offset, unsigned size)
     switch (offset) {
     case 0x00:
         return s->ctrl;
+    case 0x04:
+        return s->status;
     case 0x08: /* MAC MSB */
         return s->conf.macaddr.a[4] | (s->conf.macaddr.a[5] << 8);
     case 0x0c: /* MAC LSB */
@@ -111,6 +114,9 @@ static void greth_write(void *opaque, hwaddr offset, uint64_t value,
     switch (offset) {
     case 0x00:
         printf("Writing reg 0\n");
+        break;
+    case 0x04:
+        s->status &= ~value;
         break;
     case 0x08: /* MAC MSB */
         s->conf.macaddr.a[4] = value;
