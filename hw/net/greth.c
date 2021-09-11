@@ -21,6 +21,8 @@ struct grethState {
 
     uint32_t ctrl;
     uint32_t mdio;
+    uint32_t txdesc;
+    uint32_t rxdesc;
 
     NICState *nic;
     NICConf conf;
@@ -90,6 +92,10 @@ static uint64_t greth_read(void *opaque, hwaddr offset, unsigned size)
             | ((uint32_t)s->conf.macaddr.a[3] << 24);
     case 0x10: /* MDIO */
         return s->mdio;
+    case 0x14: /* Transmitter descriptor table */
+        return s->txdesc;
+    case 0x18: /* Receiver descriptor table */
+        return s->rxdesc;
     default:
         printf("GRETH: Unhandled read access to offset 0x%lx\n", offset);
         return 0;
@@ -118,6 +124,12 @@ static void greth_write(void *opaque, hwaddr offset, uint64_t value,
         break;
     case 0x10: /* MDIO */
         greth_mdio(s, value);
+        break;
+    case 0x14: /* Transmitter descriptor table */
+        s->txdesc = value & ~3;
+        break;
+    case 0x18: /* Receiver descriptor table */
+        s->rxdesc = value & ~3;
         break;
     default:
         printf("GRETH: Unhandled write access to offset 0x%lx\n", offset);
