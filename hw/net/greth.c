@@ -19,6 +19,8 @@ OBJECT_DECLARE_SIMPLE_TYPE(grethState, GRETH)
 struct grethState {
     SysBusDevice parent_obj;
 
+    uint32_t ctrl;
+
     NICState *nic;
     NICConf conf;
     qemu_irq irq;
@@ -42,8 +44,7 @@ static uint64_t greth_read(void *opaque, hwaddr offset, unsigned size)
 
     switch (offset) {
     case 0x00:
-        printf("Reading reg 0\n");
-        return 0;
+        return s->ctrl;
     default:
         printf("GRETH: Unhandled read access to offset 0x%lx\n", offset);
         return 0;
@@ -74,7 +75,8 @@ static const MemoryRegionOps greth_ops = {
 static void greth_reset(DeviceState *dev)
 {
     grethState *s =  GRETH(dev);
-    (void)s;
+    /* Simulate gigabit capable device */
+    s->ctrl = (1 << 27);
 }
 
 static NetClientInfo net_greth_info = {
