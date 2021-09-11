@@ -154,6 +154,36 @@ static void grlib_irqmp_set_irq(void *opaque, int irq, int level)
     }
 }
 
+static uint64_t grlib_irqmp_mpstatus_read(void)
+{
+    CPUState *cs;
+    uint64_t value;
+    int count = 0;
+
+    /* Broadcast available */
+    value = 0x8000000;
+
+    CPU_FOREACH(cs) {
+        value |= (cs->halted) << cs->cpu_index;
+        count++;
+    }
+
+    value |= count << 28;
+
+    return value;
+}
+
+static void grlib_irqmp_mpstatus_write(uint64_t value)
+{
+    CPUState *cs;
+    CPU_FOREACH(cs) {
+        if ((value & (1 << cs->cpu_index))) {
+            cs->halted = 0;
+            qemu_cpu_kick(cs);
+        }
+    }
+}
+
 static uint64_t grlib_irqmp_read(void *opaque, hwaddr addr,
                                  unsigned size)
 {
@@ -179,9 +209,11 @@ static uint64_t grlib_irqmp_read(void *opaque, hwaddr addr,
         return state->force[0];
 
     case CLEAR_OFFSET:
-    case MP_STATUS_OFFSET:
         /* Always read as 0 */
         return 0;
+
+    case MP_STATUS_OFFSET:
+        return grlib_irqmp_mpstatus_read();
 
     case BROADCAST_OFFSET:
         return state->broadcast;
@@ -255,7 +287,7 @@ static void grlib_irqmp_write(void *opaque, hwaddr addr,
         return;
 
     case MP_STATUS_OFFSET:
-        /* Read Only (no SMP support) */
+        grlib_irqmp_mpstatus_write(value);
         return;
 
     case BROADCAST_OFFSET:
