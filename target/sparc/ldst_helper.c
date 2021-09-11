@@ -568,10 +568,10 @@ static uint64_t leon3_cache_control_ld(CPUSPARCState *env, target_ulong addr,
         /* Configuration registers are read and only always keep those
            predefined values */
 
-    case 0x04:              /* Instruction cache configuration */
+    case 0x08:              /* Instruction cache configuration */
         ret = 0x10220000;
         break;
-    case 0x08:              /* Data cache configuration */
+    case 0x0c:              /* Data cache configuration */
         ret = 0x18220000;
         break;
     default:
