@@ -20,6 +20,7 @@ struct grethState {
     SysBusDevice parent_obj;
 
     uint32_t ctrl;
+    uint32_t mdio;
 
     NICState *nic;
     NICConf conf;
@@ -37,14 +38,52 @@ static ssize_t greth_receive(NetClientState *nc, const uint8_t *buf,
     return 0;
 }
 
+static void greth_mdio(grethState *s, uint64_t value)
+{
+    uint32_t phy_address;
+    uint32_t reg_address;
+    uint32_t read_op;
+
+    const uint32_t mdio_regs[] = {0x1140, 0x796d, 0x0022, 0x1612,
+                                  0x01e1, 0xcde1, 0x000d, 0x2001,
+                                  0x4006, 0x0300, 0x3c00, 0x0000,
+                                  0x0000, 0xaaaa, 0x0000, 0x3000,
+                                  0x0000, 0x00f0, 0x0000, 0x0006,
+                                  0x44fe, 0x0000, 0x0000, 0x0200,
+                                  0x0000, 0x0000, 0x0000, 0x0000,
+                                  0x0000, 0x0000, 0x0000, 0x0348};
+
+    phy_address = (value >> 11) & 0x1f;
+    reg_address = (value >> 6) & 0x1f;
+
+    read_op = value & 2;
+
+    value &= ~0x3f;
+
+    if (phy_address != 1) {
+        /* Link fail */
+        s->mdio = value | 0xffff0004;
+        return;
+    }
+
+    if (!read_op) {
+        /* Ignore writes */
+        s->mdio = value;
+        return;
+    }
+
+    s->mdio = (value & ~(0xffff0000)) | (mdio_regs[reg_address] << 16);
+}
+
 static uint64_t greth_read(void *opaque, hwaddr offset, unsigned size)
 {
     grethState *s = (grethState *)opaque;
-    (void)s;
 
     switch (offset) {
     case 0x00:
         return s->ctrl;
+    case 0x10: /* MDIO */
+        return s->mdio;
     default:
         printf("GRETH: Unhandled read access to offset 0x%lx\n", offset);
         return 0;
@@ -60,6 +99,9 @@ static void greth_write(void *opaque, hwaddr offset, uint64_t value,
     switch (offset) {
     case 0x00:
         printf("Writing reg 0\n");
+        break;
+    case 0x10: /* MDIO */
+        greth_mdio(s, value);
         break;
     default:
         printf("GRETH: Unhandled write access to offset 0x%lx\n", offset);
