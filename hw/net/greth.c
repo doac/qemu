@@ -31,6 +31,13 @@ struct grethState {
     MemoryRegion mmio;
 };
 
+static bool greth_can_receive(NetClientState *nc)
+{
+    grethState *s = qemu_get_nic_opaque(nc);
+
+    return s->ctrl & 0x2;
+}
+
 static ssize_t greth_receive(NetClientState *nc, const uint8_t *buf,
                             size_t size)
 {
@@ -109,7 +116,6 @@ static void greth_write(void *opaque, hwaddr offset, uint64_t value,
                         unsigned size)
 {
     grethState *s = (grethState *)opaque;
-    (void)s;
 
     switch (offset) {
     case 0x00:
@@ -159,6 +165,7 @@ static NetClientInfo net_greth_info = {
     .type = NET_CLIENT_DRIVER_NIC,
     .size = sizeof(NICState),
     .receive = greth_receive,
+    .can_receive = greth_can_receive,
 };
 
 static void greth_realize(DeviceState *dev, Error **errp)
