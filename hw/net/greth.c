@@ -49,10 +49,43 @@ static ssize_t greth_receive(NetClientState *nc, const uint8_t *buf,
                             size_t size)
 {
     grethState *s = qemu_get_nic_opaque(nc);
+    uint32_t descriptor[2];
+    uint32_t esize;
 
-    (void)s;
+    /* Is the receiver enabled? */
+    if ((s->ctrl & 0x2) == 0)
+        return 0;
 
-    return 0;
+    address_space_read(&s->as, s->rxdesc, MEMTXATTRS_UNSPECIFIED,
+                        descriptor, 8);
+
+    descriptor[0] = be32_to_cpu(descriptor[0]);
+    descriptor[1] = be32_to_cpu(descriptor[1]);
+
+    /* Stop when next descriptor is disabled */
+    if ((descriptor[0] & (1<<11)) == 0) {
+        return 0;
+    }
+
+    address_space_write(&s->as, descriptor[1], MEMTXATTRS_UNSPECIFIED,
+                        buf, size);
+
+    esize = cpu_to_be32(size);
+    address_space_write(&s->as, s->rxdesc, MEMTXATTRS_UNSPECIFIED,
+                        &esize, 4);
+
+    /* Wrap? */
+    if (descriptor[0] & (1 << 12))
+        s->rxdesc = s->rxdesc & ~0x3ff;
+    else
+        s->rxdesc = (s->rxdesc & ~0x3ff) | ((s->rxdesc + 8) & 0x3ff);
+
+    s->status |= 0x4;
+
+    if (s->ctrl & 8)
+        qemu_set_irq(s->irq, 1);
+
+    return size;
 }
 
 static void greth_ctrl(grethState *s, uint64_t value)
