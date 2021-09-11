@@ -100,6 +100,12 @@ static void write_bootloader(CPUSPARCState *env, uint8_t *base,
 {
     uint32_t *p = (uint32_t *) base;
 
+    stl_p(p++, 0x83444000); /* rd  %asr17, %g1 */
+    stl_p(p++, 0x8330601c); /* srl  %g1, 0x1c, %g1 */
+    stl_p(p++, 0x80904000); /* tst  %g1 */
+    stl_p(p++, 0x1280001e); /* bne  entry_point_jump */
+    stl_p(p++, 0x01000000); /* nop */
+
     /* Initialize the UARTs                                        */
     /* *UART_CONTROL = UART_RECEIVE_ENABLE | UART_TRANSMIT_ENABLE; */
     p = gen_store_u32(p, 0x80000108, 3);
