@@ -57,6 +57,10 @@ config VMXNET3_PCI
 config SMC91C111
     bool
 
+config GRETH
+    bool
+    default y
+
 config LAN9118
     bool
     select PTIMER
