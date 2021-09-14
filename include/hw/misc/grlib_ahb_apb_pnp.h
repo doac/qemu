@@ -31,9 +31,11 @@ OBJECT_DECLARE_SIMPLE_TYPE(AHBPnp, GRLIB_AHB_PNP)
 #define TYPE_GRLIB_APB_PNP "grlib-apbpnp"
 OBJECT_DECLARE_SIMPLE_TYPE(APBPnp, GRLIB_APB_PNP)
 
-void grlib_ahb_pnp_add_entry(AHBPnp *dev, uint32_t address, uint32_t mask,
-                             uint8_t vendor, uint16_t device, int slave,
-                             int type);
+uint32_t grlib_ahb_pnp_add_entry(AHBPnp *dev, uint32_t address, uint32_t mask,
+                                 uint8_t vendor, uint16_t device, int slave,
+                                 int type);
+uint32_t grlib_ahb_pnp_add_bar(AHBPnp *dev, uint32_t entry, uint32_t address,
+                               uint32_t mask, int type);
 void grlib_apb_pnp_add_entry(APBPnp *dev, uint32_t address, uint32_t mask,
                              uint8_t vendor, uint16_t device, uint8_t version,
                              uint8_t irq, int type);

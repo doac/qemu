@@ -62,9 +62,9 @@ typedef struct AHBPnp {
     uint8_t slave_count;
 } AHBPnp;
 
-void grlib_ahb_pnp_add_entry(AHBPnp *dev, uint32_t address, uint32_t mask,
-                             uint8_t vendor, uint16_t device, int slave,
-                             int type)
+uint32_t grlib_ahb_pnp_add_entry(AHBPnp *dev, uint32_t address, uint32_t mask,
+                                 uint8_t vendor, uint16_t device, int slave,
+                                 int type)
 {
     unsigned int reg_start;
 
@@ -116,6 +116,16 @@ void grlib_ahb_pnp_add_entry(AHBPnp *dev, uint32_t address, uint32_t mask,
                                      GRLIB_PNP_DEV_SIZE,
                                      device);
     reg_start += 4;
+
+    /* AHB Memory Space */
+    return grlib_ahb_pnp_add_bar(dev, reg_start, address, mask, type);
+}
+
+uint32_t grlib_ahb_pnp_add_bar(AHBPnp *dev, uint32_t entry, uint32_t address,
+                               uint32_t mask, int type)
+{
+    uint32_t reg_start = entry;
+
     /* AHB Memory Space */
     dev->regs[reg_start] = type;
     dev->regs[reg_start] = deposit32(dev->regs[reg_start],
@@ -128,6 +138,8 @@ void grlib_ahb_pnp_add_entry(AHBPnp *dev, uint32_t address, uint32_t mask,
                                      GRLIB_PNP_MASK_SHIFT,
                                      GRLIB_PNP_MASK_SIZE,
                                      mask);
+
+    return reg_start + 1;
 }
 
 static uint64_t grlib_ahb_pnp_read(void *opaque, hwaddr offset, unsigned size)
