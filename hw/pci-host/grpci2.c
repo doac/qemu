@@ -23,6 +23,7 @@ struct grpci2State {
 
     qemu_irq irq;
     MemoryRegion mmio;
+    MemoryRegion pci_mem;
     MemoryRegion conf_mem;
     MemoryRegion data_mem;
 };
@@ -108,6 +109,8 @@ static void grpci2_realize(DeviceState *dev, Error **errp)
 
     memory_region_init_io(&s->mmio, OBJECT(s), &grpci2_ops, s,
                           "grlib-grpci2", 0x100);
+
+    memory_region_init(&s->pci_mem, OBJECT(s), "grlib-grpci2-mem", 0x40000000);
 
     memory_region_init_io(&s->data_mem, OBJECT(s), &grpci2_conf_ops, s,
                           "grlib-grpci2-data", 0x10000);
