@@ -18,6 +18,9 @@ OBJECT_DECLARE_SIMPLE_TYPE(grpci2State, GRPCI2)
 struct grpci2State {
     PCIHostState parent_obj;
 
+    uint32_t ctrl;
+    uint32_t status;
+
     qemu_irq irq;
     MemoryRegion mmio;
 };
@@ -25,9 +28,14 @@ struct grpci2State {
 static uint64_t grpci2_read(void *opaque, hwaddr offset, unsigned size)
 {
     grpci2State *s = (grpci2State *)opaque;
-    (void)s;
 
     switch (offset) {
+    case 0x00: /* control */
+        return s->ctrl;
+    case 0x04: /* status and capability */
+        return s->status;
+    case 0x08: /* PCI master prefetch burst limit */
+        return 0xff;
     default:
         printf("GRPCI2: Unhandled read access to offset 0x%lx\n", offset);
         return 0;
@@ -40,9 +48,13 @@ static void grpci2_write(void *opaque, hwaddr offset, uint64_t value,
                         unsigned size)
 {
     grpci2State *s = (grpci2State *)opaque;
-    (void)s;
 
     switch (offset) {
+    case 0x00: /* control */
+        s->ctrl = value;
+        return;
+    case 0x04: /* status and capability */
+        return;
     default:
         printf("GRPCI2: Unhandled write of value 0x%lx to offset 0x%lx\n",
                value, offset);
