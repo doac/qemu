@@ -94,6 +94,23 @@ static const MemoryRegionOps grpci2_conf_ops = {
     .endianness = DEVICE_LITTLE_ENDIAN,
 };
 
+static int grpci2_map_irq(PCIDevice *pci_dev, int irq_num)
+{
+    return (irq_num + (pci_dev->devfn >> 3)) & 3;
+}
+
+static void grpci2_set_irq(void *opaque, int irq_num, int level)
+{
+    grpci2State *s = opaque;
+
+    if (!level)
+        s->status |= (irq_num << 8);
+    else
+        s->status &= ~(irq_num << 8);
+
+    qemu_set_irq(s->irq, level);
+}
+
 static void grpci2_reset(DeviceState *dev)
 {
     grpci2State *s =  GRPCI2(dev);
@@ -105,6 +122,7 @@ static void grpci2_reset(DeviceState *dev)
 static void grpci2_realize(DeviceState *dev, Error **errp)
 {
     SysBusDevice *sbd = SYS_BUS_DEVICE(dev);
+    PCIHostState *phb = PCI_HOST_BRIDGE(dev);
     grpci2State *s = GRPCI2(dev);
 
     memory_region_init_io(&s->mmio, OBJECT(s), &grpci2_ops, s,
@@ -122,6 +140,14 @@ static void grpci2_realize(DeviceState *dev, Error **errp)
     sysbus_init_mmio(sbd, &s->data_mem);
     sysbus_init_mmio(sbd, &s->conf_mem);
     sysbus_init_irq(sbd, &s->irq);
+
+    phb->bus = pci_register_root_bus(dev, NULL,
+                                     grpci2_set_irq,
+                                     grpci2_map_irq,
+                                     s,
+                                     get_system_memory(),
+                                     &s->data_mem,
+                                     PCI_DEVFN(6, 0), 4, TYPE_PCI_BUS);
 }
 
 static Property grpci2_properties[] = {
