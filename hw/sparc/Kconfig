@@ -18,7 +18,9 @@ config SUN4M
 
 config LEON3
     bool
+    imply PCI_DEVICES
     select GRLIB
+    select PCI
 
 config GRLIB
     bool
