@@ -67,6 +67,14 @@ static const MemoryRegionOps grpci2_ops = {
     .endianness = DEVICE_NATIVE_ENDIAN,
 };
 
+static void grpci2_reset(DeviceState *dev)
+{
+    grpci2State *s =  GRPCI2(dev);
+
+    s->ctrl = 0;
+    s->status = (1 << 30) | (1 << 29) | (1 << 26) | (1 << 20);
+}
+
 static void grpci2_realize(DeviceState *dev, Error **errp)
 {
     SysBusDevice *sbd = SYS_BUS_DEVICE(dev);
@@ -87,6 +95,7 @@ static void grpci2_class_init(ObjectClass *klass, void *data)
     DeviceClass *dc = DEVICE_CLASS(klass);
 
     dc->realize = grpci2_realize;
+    dc->reset = grpci2_reset;
     set_bit(DEVICE_CATEGORY_BRIDGE, dc->categories);
     device_class_set_props(dc, grpci2_properties);
 }
