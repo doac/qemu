@@ -126,14 +126,21 @@ uint32_t grlib_ahb_pnp_add_bar(AHBPnp *dev, uint32_t entry, uint32_t address,
 {
     uint32_t reg_start = entry;
 
+    if (type == GRLIB_AHBIO_AREA) {
+        address = (address & 0xfff000) >> 12;
+        mask = (~mask) >> 8;
+    } else {
+        address = address >> 20;
+        mask = (~mask) >> 20;
+    }
+
     /* AHB Memory Space */
     dev->regs[reg_start] = type;
     dev->regs[reg_start] = deposit32(dev->regs[reg_start],
                                      GRLIB_PNP_ADDR_SHIFT,
                                      GRLIB_PNP_ADDR_SIZE,
-                                     extract32(address,
-                                               GRLIB_AHB_DEV_ADDR_SHIFT,
-                                               GRLIB_AHB_DEV_ADDR_SIZE));
+                                     address);
+
     dev->regs[reg_start] = deposit32(dev->regs[reg_start],
                                      GRLIB_PNP_MASK_SHIFT,
                                      GRLIB_PNP_MASK_SIZE,

@@ -54,6 +54,7 @@ void grlib_apb_pnp_add_entry(APBPnp *dev, uint32_t address, uint32_t mask,
 #define GRLIB_CPU_AREA       (0x00)
 #define GRLIB_APBIO_AREA     (0x01)
 #define GRLIB_AHBMEM_AREA    (0x02)
+#define GRLIB_AHBIO_AREA     (0x03)
 
 #define GRLIB_AHB_MASTER     (0x00)
 #define GRLIB_AHB_SLAVE      (0x01)
