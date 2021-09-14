@@ -23,6 +23,8 @@ struct grpci2State {
 
     qemu_irq irq;
     MemoryRegion mmio;
+    MemoryRegion conf_mem;
+    MemoryRegion data_mem;
 };
 
 static uint64_t grpci2_read(void *opaque, hwaddr offset, unsigned size)
@@ -67,6 +69,30 @@ static const MemoryRegionOps grpci2_ops = {
     .endianness = DEVICE_NATIVE_ENDIAN,
 };
 
+
+static uint64_t grpci2_conf_read(void *opaque, hwaddr offset, unsigned size)
+{
+    grpci2State *s = (grpci2State *)opaque;
+    PCIHostState *phb = PCI_HOST_BRIDGE(s);
+
+    return pci_data_read(phb->bus, offset, size);
+}
+
+static void grpci2_conf_write(void *opaque, hwaddr offset, uint64_t value,
+                        unsigned size)
+{
+    grpci2State *s = (grpci2State *)opaque;
+    PCIHostState *phb = PCI_HOST_BRIDGE(s);
+
+    return pci_data_write(phb->bus, offset, value, size);
+}
+
+static const MemoryRegionOps grpci2_conf_ops = {
+    .read = grpci2_conf_read,
+    .write = grpci2_conf_write,
+    .endianness = DEVICE_LITTLE_ENDIAN,
+};
+
 static void grpci2_reset(DeviceState *dev)
 {
     grpci2State *s =  GRPCI2(dev);
@@ -82,7 +108,16 @@ static void grpci2_realize(DeviceState *dev, Error **errp)
 
     memory_region_init_io(&s->mmio, OBJECT(s), &grpci2_ops, s,
                           "grlib-grpci2", 0x100);
+
+    memory_region_init_io(&s->data_mem, OBJECT(s), &grpci2_conf_ops, s,
+                          "grlib-grpci2-data", 0x10000);
+
+    memory_region_init_io(&s->conf_mem, OBJECT(s), &grpci2_conf_ops, s,
+                          "grlib-grpci2-conf", 0x10000);
+
     sysbus_init_mmio(sbd, &s->mmio);
+    sysbus_init_mmio(sbd, &s->data_mem);
+    sysbus_init_mmio(sbd, &s->conf_mem);
     sysbus_init_irq(sbd, &s->irq);
 }
 
