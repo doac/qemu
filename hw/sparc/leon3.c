@@ -105,8 +105,7 @@ static uint32_t *gen_store_u32(uint32_t *code, hwaddr addr, uint32_t val)
  * state (eg: initialized by the bootloader). This little code reproduces
  * this behavior.
  */
-static void write_bootloader(CPUSPARCState *env, uint8_t *base,
-                             hwaddr kernel_addr)
+static void write_bootloader(uint8_t *base, hwaddr kernel_addr)
 {
     uint32_t *p = (uint32_t *) base;
 
@@ -372,10 +371,7 @@ static void leon3_generic_hw_init(MachineState *machine)
             uint8_t *bootloader_entry;
 
             bootloader_entry = memory_region_get_ram_ptr(prom);
-            write_bootloader(env, bootloader_entry, entry);
-            env->pc = LEON3_PROM_OFFSET;
-            env->npc = LEON3_PROM_OFFSET + 4;
-            reset_info->entry = LEON3_PROM_OFFSET;
+            write_bootloader(bootloader_entry, entry);
         }
     }
 
