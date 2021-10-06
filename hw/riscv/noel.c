@@ -44,6 +44,7 @@
 #include "sysemu/arch_init.h"
 #include "sysemu/device_tree.h"
 #include "sysemu/sysemu.h"
+#include "hw/misc/grlib_ahb_apb_pnp.h"
 
 #if defined(TARGET_RISCV32)
 #define NOEL_CPU TYPE_RISCV_CPU_BASE32
@@ -279,6 +280,8 @@ static void noel_board_init(MachineState *machine)
     int i;
     unsigned int smp_cpus = machine->smp.cpus;
     const char *bios_name = machine->firmware;
+    AHBPnp *ahb_pnp;
+    APBPnp *apb_pnp;
 
     /* Initialize SOC */
     object_initialize_child(OBJECT(machine), "soc", &s->soc,
@@ -386,6 +389,29 @@ static void noel_board_init(MachineState *machine)
     sysbus_mmio_map(SYS_BUS_DEVICE(dev), 0, memmap[NOEL_UART0].base);
     sysbus_connect_irq(SYS_BUS_DEVICE(dev), 0,
                        qdev_get_gpio_in(DEVICE(s->plic), UART0_IRQ));
+
+    ahb_pnp = GRLIB_AHB_PNP(qdev_new(TYPE_GRLIB_AHB_PNP));
+    sysbus_realize_and_unref(SYS_BUS_DEVICE(ahb_pnp), &error_fatal);
+    sysbus_mmio_map(SYS_BUS_DEVICE(ahb_pnp), 0, 0xFFFFF000);
+
+    apb_pnp = GRLIB_APB_PNP(qdev_new(TYPE_GRLIB_APB_PNP));
+    sysbus_realize_and_unref(SYS_BUS_DEVICE(apb_pnp), &error_fatal);
+    sysbus_mmio_map(SYS_BUS_DEVICE(apb_pnp), 0, 0xfc0ff000);
+    grlib_ahb_pnp_add_entry(ahb_pnp, 0xfc000000, 0xfffff,
+                            GRLIB_VENDOR_GAISLER, GRLIB_APBMST_DEV,
+                            GRLIB_AHB_SLAVE, GRLIB_AHBMEM_AREA);
+
+    grlib_apb_pnp_add_entry(apb_pnp, 0xfc001000, 0xFFF,
+                            GRLIB_VENDOR_GAISLER, GRLIB_APBUART_DEV, 1,
+                            1, GRLIB_APBIO_AREA);
+
+    grlib_ahb_pnp_add_entry(ahb_pnp, 0xf8000000, 0x3ffffff,
+                            GRLIB_VENDOR_GAISLER, GRLIB_PLIC_DEV,
+                            GRLIB_AHB_SLAVE, GRLIB_AHBMEM_AREA);
+
+    grlib_ahb_pnp_add_entry(ahb_pnp, 0xe0000000, 0xFFFFF,
+                            GRLIB_VENDOR_GAISLER, GRLIB_CLINT_DEV,
+                            GRLIB_AHB_SLAVE, GRLIB_AHBMEM_AREA);
 }
 
 static void noel_machine_class_init(ObjectClass *oc, void *data)
