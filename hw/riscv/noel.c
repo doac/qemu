@@ -44,6 +44,7 @@
 #include "sysemu/arch_init.h"
 #include "sysemu/device_tree.h"
 #include "sysemu/sysemu.h"
+#include "sysemu/reset.h"
 #include "hw/misc/grlib_ahb_apb_pnp.h"
 
 #if defined(TARGET_RISCV32)
@@ -60,6 +61,11 @@ static const MemMapEntry noel_memmap[] = {
     [NOEL_UART0] =    { 0xfc001000,      0x100 },
     [NOEL_GRETH] =    { 0xfc084000,      0x100 },    
 };
+
+typedef struct ResetData {
+    RISCVCPU *cpu;
+    target_ulong sp;            /* initial stack pointer */
+} ResetData;
 
 static void create_fdt(NoelState *s, const MemMapEntry *memmap,
                        uint64_t mem_size, const char *cmdline)
@@ -264,6 +270,14 @@ static void create_fdt(NoelState *s, const MemMapEntry *memmap,
     g_free(nodename);
 }
 
+static void main_cpu_reset(void *opaque)
+{
+    ResetData *s   = (ResetData *)opaque;
+    CPURISCVState  *env = &s->cpu->env;
+
+    env->gpr[xSP] = s->sp;
+}
+
 static void noel_board_init(MachineState *machine)
 {
     const MemMapEntry *memmap = noel_memmap;
@@ -280,6 +294,7 @@ static void noel_board_init(MachineState *machine)
     int i;
     unsigned int smp_cpus = machine->smp.cpus;
     const char *bios_name = machine->firmware;
+    ResetData  *reset_info;
     AHBPnp *ahb_pnp;
     APBPnp *apb_pnp;
 
@@ -294,6 +309,11 @@ static void noel_board_init(MachineState *machine)
                             &error_abort);
 
     sysbus_realize(SYS_BUS_DEVICE(&s->soc), &error_abort);
+
+    reset_info        = g_malloc0(sizeof(ResetData));
+    reset_info->cpu   = &s->soc.harts[0];
+    reset_info->sp    = memmap[NOEL_DRAM].base + machine->ram_size;
+    qemu_register_reset(main_cpu_reset, reset_info);
 
     /* register system main memory (actual RAM) */
     memory_region_init_ram(main_mem, NULL, "riscv.noel.ram",
