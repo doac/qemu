@@ -169,7 +169,7 @@ static void grlib_ahb_pnp_write(void *opaque, hwaddr addr,
 static const MemoryRegionOps grlib_ahb_pnp_ops = {
     .read       = grlib_ahb_pnp_read,
     .write      = grlib_ahb_pnp_write,
-    .endianness = DEVICE_BIG_ENDIAN,
+    .endianness = DEVICE_HOST_ENDIAN,
     .impl = {
         .min_access_size = 4,
         .max_access_size = 4,
@@ -280,7 +280,7 @@ static void grlib_apb_pnp_write(void *opaque, hwaddr addr,
 static const MemoryRegionOps grlib_apb_pnp_ops = {
     .read       = grlib_apb_pnp_read,
     .write      = grlib_apb_pnp_write,
-    .endianness = DEVICE_BIG_ENDIAN,
+    .endianness = DEVICE_HOST_ENDIAN,
     .impl = {
         .min_access_size = 4,
         .max_access_size = 4,
