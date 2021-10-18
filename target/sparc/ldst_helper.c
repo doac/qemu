@@ -569,10 +569,10 @@ static uint64_t leon3_cache_control_ld(CPUSPARCState *env, target_ulong addr,
            predefined values */
 
     case 0x08:              /* Instruction cache configuration */
-        ret = 0x10220000;
+        ret = 0x10220008;
         break;
     case 0x0c:              /* Data cache configuration */
-        ret = 0x18220000;
+        ret = 0x18220008;
         break;
     default:
         DPRINTF_CACHE_CONTROL("read unknown register %08x\n", addr);
