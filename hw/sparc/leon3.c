@@ -117,15 +117,15 @@ static void write_bootloader(uint8_t *base, hwaddr kernel_addr)
 
     /* Initialize the UARTs                                        */
     /* *UART_CONTROL = UART_RECEIVE_ENABLE | UART_TRANSMIT_ENABLE; */
-    p = gen_store_u32(p, 0x80000108, 3);
+    p = gen_store_u32(p, LEON3_UART_OFFSET + 0x8, 3);
 
     /* Initialize the TIMER 0                                      */
     /* *GPTIMER_SCALER_RELOAD = 40 - 1;                            */
-    p = gen_store_u32(p, 0x80000304, 39);
+    p = gen_store_u32(p, LEON3_TIMER_OFFSET + 0x4, 39);
     /* *GPTIMER0_COUNTER_RELOAD = 0xFFFE;                          */
-    p = gen_store_u32(p, 0x80000314, 0xFFFFFFFE);
+    p = gen_store_u32(p, LEON3_TIMER_OFFSET + 0x14, 0xFFFFFFFE);
     /* *GPTIMER0_CONFIG = GPTIMER_ENABLE | GPTIMER_RESTART;        */
-    p = gen_store_u32(p, 0x80000318, 3);
+    p = gen_store_u32(p, LEON3_TIMER_OFFSET + 0x18, 3);
 
     /* JUMP to the entry point                                     */
     stl_p(p++, 0x82100000); /* mov %g0, %g1 */
