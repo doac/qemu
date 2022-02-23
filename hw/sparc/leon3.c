@@ -258,7 +258,9 @@ static void leon3_generic_common_hw_init(MachineState *machine)
     char       *filename;
     int         bios_size;
     int         prom_size;
+#ifdef USE_GRPCI2
     uint32_t    pnp_entry;
+#endif
     ResetData  *reset_info;
     DeviceState *dev, *irqmpdev;
     int i;
@@ -419,6 +421,7 @@ static void leon3_generic_common_hw_init(MachineState *machine)
                             LEON3_UART_IRQ, GRLIB_APBIO_AREA);
 
     /* Allocate greth */
+#ifdef USE_GRETH
     qemu_check_nic_model(&nd_table[0], "grlib-greth");
     dev = qdev_new(TYPE_GRLIB_GRETH);
     qdev_set_nic_properties(dev, &nd_table[0]);
@@ -430,8 +433,10 @@ static void leon3_generic_common_hw_init(MachineState *machine)
     grlib_apb_pnp_add_entry(apb_pnp, LEON3_GRETH_OFFSET, 0xFF,
                             GRLIB_VENDOR_GAISLER, GRLIB_GRETH_DEV, 0,
                             LEON3_GRETH_IRQ, GRLIB_APBIO_AREA);
+#endif
 
     /* Allocate grpci2 */
+#ifdef USE_GRPCI2
     dev = qdev_new(TYPE_GRLIB_GRPCI2);
     sysbus_realize_and_unref(SYS_BUS_DEVICE(dev), &error_fatal);
     sysbus_mmio_map(SYS_BUS_DEVICE(dev), 0, LEON3_GRPCI2_OFFSET);
@@ -447,6 +452,7 @@ static void leon3_generic_common_hw_init(MachineState *machine)
                             GRLIB_VENDOR_GAISLER, GRLIB_GRPCI2_DEV,
                             GRLIB_AHB_SLAVE, GRLIB_AHBMEM_AREA);
     grlib_ahb_pnp_add_bar(ahb_pnp, pnp_entry, 0xff800000, 0x0003ffff, GRLIB_AHBIO_AREA);
+#endif
 }
 
 static void leon3_generic_hw_init(MachineState *machine)
