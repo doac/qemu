@@ -116,6 +116,15 @@ static void write_bootloader(uint8_t *base, hwaddr kernel_addr)
 {
     uint32_t *p = (uint32_t *) base;
 
+    /* Enable data cache snooping */
+    stl_p(p++, 0x03002000); /* sethi  %hi(0x800000), %g1 */
+    stl_p(p++, 0xc2a00040); /* sta  %g1, [ %g0 ] (2) */
+
+    /* Enable FPU */
+    stl_p(p++, 0x83480000); /* rd %psr, %g1 */
+    stl_p(p++, 0x82107000); /* or %g1, 0x1000, %g1 */
+    stl_p(p++, 0x81880001); /* wr %g1, %psr */
+
     stl_p(p++, 0x83444000); /* rd  %asr17, %g1 */
     stl_p(p++, 0x8330601c); /* srl  %g1, 0x1c, %g1 */
     stl_p(p++, 0x80904000); /* tst  %g1 */
