@@ -154,7 +154,16 @@ static uint64_t grlib_ahb_pnp_read(void *opaque, hwaddr offset, unsigned size)
     AHBPnp *ahb_pnp = GRLIB_AHB_PNP(opaque);
     uint32_t val;
 
+    if (size != 4 && size != 1) {
+        printf("Unsupported from from AHB PnP\n");
+        exit(1);
+    }
+
     val = ahb_pnp->regs[offset >> 2];
+
+    if (size == 1)
+        val = (val >> (24 - 8 * (offset & 3))) & 0xff;
+
     trace_grlib_ahb_pnp_read(offset, val);
 
     return val;
@@ -171,7 +180,7 @@ static const MemoryRegionOps grlib_ahb_pnp_ops = {
     .write      = grlib_ahb_pnp_write,
     .endianness = DEVICE_NATIVE_ENDIAN,
     .impl = {
-        .min_access_size = 4,
+        .min_access_size = 1,
         .max_access_size = 4,
     },
 };
@@ -265,7 +274,16 @@ static uint64_t grlib_apb_pnp_read(void *opaque, hwaddr offset, unsigned size)
     APBPnp *apb_pnp = GRLIB_APB_PNP(opaque);
     uint32_t val;
 
+    if (size != 4 && size != 1) {
+        printf("Unsupported from from APB PnP\n");
+        exit(1);
+    }
+
     val = apb_pnp->regs[offset >> 2];
+
+    if (size == 1)
+        val = (val >> (24 - 8 * (offset & 3))) & 0xff;
+
     trace_grlib_apb_pnp_read(offset, val);
 
     return val;
@@ -282,7 +300,7 @@ static const MemoryRegionOps grlib_apb_pnp_ops = {
     .write      = grlib_apb_pnp_write,
     .endianness = DEVICE_NATIVE_ENDIAN,
     .impl = {
-        .min_access_size = 4,
+        .min_access_size = 1,
         .max_access_size = 4,
     },
 };
