@@ -45,4 +45,7 @@ void grlib_irqmp_ack(DeviceState *dev, int intno, int cpu_index);
 /* GRETH */
 #define TYPE_GRLIB_GRETH "grlib-greth"
 
+/* GRPCI2 */
+#define TYPE_GRLIB_GRPCI2 "grlib-grpci2"
+
 #endif /* GRLIB_H */
