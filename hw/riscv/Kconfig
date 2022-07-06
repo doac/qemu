@@ -83,3 +83,10 @@ config SPIKE
     select MSI_NONBROKEN
     select RISCV_ACLINT
     select SIFIVE_PLIC
+
+
+config NOEL
+    bool
+    select SIFIVE_CLINT
+    select SIFIVE_PLIC
+    select GRLIB
