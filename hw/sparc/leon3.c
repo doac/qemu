@@ -47,6 +47,8 @@
 /* Default system clock.  */
 #define CPU_CLK (40 * 1000 * 1000)
 
+#define LEON3_MAX_CPU 16
+
 #define LEON3_PROM_FILENAME "u-boot.bin"
 #define LEON3_PROM_OFFSET    (0x00000000)
 #define LEON3_RAM_OFFSET     (0x40000000)
@@ -136,7 +138,6 @@ static void main_cpu_reset(void *opaque)
 
     cpu_reset(cpu);
 
-    cpu->halted = 0;
     env->pc     = s->entry;
     env->npc    = s->entry + 4;
     env->regbase[6] = s->sp;
@@ -240,18 +241,6 @@ static void leon3_generic_hw_init(MachineState *machine)
     AHBPnp *ahb_pnp;
     APBPnp *apb_pnp;
 
-    /* Init CPU */
-    cpu = SPARC_CPU(cpu_create(machine->cpu_type));
-    env = &cpu->env;
-
-    cpu_sparc_set_id(env, 0);
-
-    /* Reset data */
-    reset_info        = g_new0(ResetData, 1);
-    reset_info->cpu   = cpu;
-    reset_info->sp    = LEON3_RAM_OFFSET + ram_size;
-    qemu_register_reset(main_cpu_reset, reset_info);
-
     ahb_pnp = GRLIB_AHB_PNP(qdev_new(TYPE_GRLIB_AHB_PNP));
     sysbus_realize_and_unref(SYS_BUS_DEVICE(ahb_pnp), &error_fatal);
     sysbus_mmio_map(SYS_BUS_DEVICE(ahb_pnp), 0, LEON3_AHB_PNP_OFFSET);
@@ -268,17 +257,36 @@ static void leon3_generic_hw_init(MachineState *machine)
 
     /* Allocate IRQ manager */
     irqmpdev = qdev_new(TYPE_GRLIB_IRQMP);
-    qdev_init_gpio_in_named_with_opaque(DEVICE(cpu), leon3_set_pil_in,
-                                        env, "pil", 1);
-    qdev_connect_gpio_out_named(irqmpdev, "grlib-irq", 0,
-                                qdev_get_gpio_in_named(DEVICE(cpu), "pil", 0));
     sysbus_realize_and_unref(SYS_BUS_DEVICE(irqmpdev), &error_fatal);
     sysbus_mmio_map(SYS_BUS_DEVICE(irqmpdev), 0, LEON3_IRQMP_OFFSET);
-    env->irq_manager = irqmpdev;
-    env->qemu_irq_ack = leon3_irq_manager;
     grlib_apb_pnp_add_entry(apb_pnp, LEON3_IRQMP_OFFSET, 0xFFF,
                             GRLIB_VENDOR_GAISLER, GRLIB_IRQMP_DEV,
                             2, 0, GRLIB_APBIO_AREA);
+
+    /* Init CPUs */
+    for (i = 0; i < machine->smp.cpus; i++) {
+        cpu = SPARC_CPU(object_new(machine->cpu_type));
+        object_property_set_bool(OBJECT(cpu), "start-powered-off", i != 0,
+                                &error_fatal);
+        qdev_realize_and_unref(DEVICE(cpu), NULL, &error_fatal);
+
+        /* Reset data */
+        reset_info        = g_malloc0(sizeof(ResetData));
+        reset_info->sp    = LEON3_RAM_OFFSET + ram_size;
+        reset_info->cpu   = cpu;
+        reset_info->entry = LEON3_PROM_OFFSET;
+        qemu_register_reset(main_cpu_reset, reset_info);
+
+        env = &cpu->env;
+
+        env->irq_manager = irqmpdev;
+        env->qemu_irq_ack = leon3_irq_manager;
+
+        qdev_init_gpio_in_named_with_opaque(DEVICE(cpu), leon3_set_pil_in,
+                                            env, "pil", 1);
+        qdev_connect_gpio_out_named(irqmpdev, "grlib-irq", i,
+                                qdev_get_gpio_in_named(DEVICE(cpu), "pil", 0));
+    }
 
     /* Allocate RAM */
     if (ram_size > 1 * GiB) {
@@ -397,6 +405,7 @@ static void leon3_generic_machine_init(MachineClass *mc)
     mc->init = leon3_generic_hw_init;
     mc->default_cpu_type = SPARC_CPU_TYPE_NAME("LEON3");
     mc->default_ram_id = "leon3.ram";
+    mc->max_cpus = LEON3_MAX_CPU;
 }
 
 DEFINE_MACHINE("leon3_generic", leon3_generic_machine_init)
