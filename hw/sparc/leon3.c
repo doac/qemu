@@ -165,9 +165,9 @@ static void leon3_cache_control_int(CPUSPARCState *env)
     }
 }
 
-static void leon3_irq_ack(void *irq_manager, int intno)
+void leon3_irq_ack(void *irq_manager, int intno, int cpu_index)
 {
-    grlib_irqmp_ack((DeviceState *)irq_manager, intno);
+    grlib_irqmp_ack((DeviceState *)irq_manager, intno, cpu_index);
 }
 
 /*
