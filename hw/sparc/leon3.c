@@ -52,15 +52,22 @@
 #define LEON3_MAX_CPU 16
 
 #define LEON3_PROM_FILENAME "u-boot.bin"
-#define LEON3_PROM_OFFSET    (0x00000000)
-#define LEON3_RAM_OFFSET     (0x40000000)
 
-#define LEON3_UART_OFFSET  (0x80000100)
+static ram_addr_t leon3_ram_addr;
+static ram_addr_t leon3_rom_addr;
+
+static ram_addr_t leon3_uart_offset;
+static ram_addr_t leon3_irq_offset;
+static ram_addr_t leon3_timer_offset;
+static ram_addr_t leon3_apb_pnp_offset;
+static ram_addr_t leon3_ahb_pnp_offset;
+
+#define LEON3_UART_OFFSET  leon3_uart_offset
 #define LEON3_UART_IRQ     (3)
 
-#define LEON3_IRQMP_OFFSET (0x80000200)
+#define LEON3_IRQMP_OFFSET leon3_irq_offset
 
-#define LEON3_TIMER_OFFSET (0x80000300)
+#define LEON3_TIMER_OFFSET leon3_timer_offset
 #define LEON3_TIMER_IRQ    (6)
 #define LEON3_TIMER_COUNT  (2)
 
@@ -70,8 +77,8 @@
 #define LEON3_GRPCI2_OFFSET (0x80000f00)
 #define LEON3_GRPCI2_IRQ    (11)
 
-#define LEON3_APB_PNP_OFFSET (0x800FF000)
-#define LEON3_AHB_PNP_OFFSET (0xFFFFF000)
+#define LEON3_APB_PNP_OFFSET leon3_apb_pnp_offset
+#define LEON3_AHB_PNP_OFFSET leon3_ahb_pnp_offset
 
 typedef struct ResetData {
     SPARCCPU *cpu;
@@ -229,7 +236,7 @@ static void leon3_irq_manager(CPUSPARCState *env, void *irq_manager, int intno)
     leon3_cache_control_int(env);
 }
 
-static void leon3_generic_hw_init(MachineState *machine)
+static void leon3_generic_common_hw_init(MachineState *machine)
 {
     ram_addr_t ram_size = machine->ram_size;
     const char *bios_name = machine->firmware ?: LEON3_PROM_FILENAME;
@@ -280,9 +287,9 @@ static void leon3_generic_hw_init(MachineState *machine)
 
         /* Reset data */
         reset_info        = g_malloc0(sizeof(ResetData));
-        reset_info->sp    = LEON3_RAM_OFFSET + ram_size;
+        reset_info->sp    = leon3_ram_addr + ram_size;
         reset_info->cpu   = cpu;
-        reset_info->entry = LEON3_PROM_OFFSET;
+        reset_info->entry = leon3_rom_addr;
         qemu_register_reset(main_cpu_reset, reset_info);
 
         env = &cpu->env;
@@ -304,13 +311,12 @@ static void leon3_generic_hw_init(MachineState *machine)
         exit(1);
     }
 
-    memory_region_add_subregion(address_space_mem, LEON3_RAM_OFFSET,
-                                machine->ram);
+    memory_region_add_subregion(address_space_mem, leon3_ram_addr, machine->ram);
 
     /* Allocate BIOS */
     prom_size = 32 * MiB;
     memory_region_init_rom(prom, NULL, "Leon3.bios", prom_size, &error_fatal);
-    memory_region_add_subregion(address_space_mem, LEON3_PROM_OFFSET, prom);
+    memory_region_add_subregion(address_space_mem, leon3_rom_addr, prom);
 
     /* Load boot prom */
     filename = qemu_find_file(QEMU_FILE_TYPE_BIOS, bios_name);
@@ -333,7 +339,7 @@ static void leon3_generic_hw_init(MachineState *machine)
         if (ret > 0)
             bios_size = ret;
         else
-            ret = load_image_targphys(filename, LEON3_PROM_OFFSET, bios_size);
+            ret = load_image_targphys(filename, leon3_rom_addr, bios_size);
         if (ret < 0 || ret > prom_size) {
             error_report("could not load prom '%s'", filename);
             exit(1);
@@ -434,6 +440,36 @@ static void leon3_generic_hw_init(MachineState *machine)
     grlib_ahb_pnp_add_bar(ahb_pnp, pnp_entry, 0xff800000, 0x0003ffff, GRLIB_AHBIO_AREA);
 }
 
+static void leon3_generic_hw_init(MachineState *machine)
+{
+    leon3_uart_offset = 0x80000100;
+    leon3_irq_offset = 0x80000200;
+    leon3_timer_offset = 0x80000300;
+
+    leon3_apb_pnp_offset = 0x800FF000;
+    leon3_ahb_pnp_offset = 0xFFFFF000;
+
+    leon3_ram_addr = 0x40000000;
+    leon3_rom_addr = 0x0;
+
+    leon3_generic_common_hw_init(machine);
+}
+
+static void leon3_generic_0_hw_init(MachineState *machine)
+{
+    leon3_uart_offset = 0xff900000;
+    leon3_irq_offset = 0xff904000;
+    leon3_timer_offset = 0xff908000;
+
+    leon3_apb_pnp_offset = 0xff9ff000;
+    leon3_ahb_pnp_offset = 0xFFFFF000;
+
+    leon3_ram_addr = 0x0;
+    leon3_rom_addr = 0xc0000000;
+
+    leon3_generic_common_hw_init(machine);
+}
+
 static void leon3_generic_machine_init(MachineClass *mc)
 {
     mc->desc = "Leon-3 generic";
@@ -444,3 +480,14 @@ static void leon3_generic_machine_init(MachineClass *mc)
 }
 
 DEFINE_MACHINE("leon3_generic", leon3_generic_machine_init)
+
+static void leon3_generic_0_machine_init(MachineClass *mc)
+{
+    mc->desc = "Leon-3 generic 0";
+    mc->init = leon3_generic_0_hw_init;
+    mc->default_cpu_type = SPARC_CPU_TYPE_NAME("LEON3");
+    mc->default_ram_id = "leon3.ram";
+    mc->max_cpus = LEON3_MAX_CPU;
+}
+
+DEFINE_MACHINE("leon3_generic_0", leon3_generic_0_machine_init)
