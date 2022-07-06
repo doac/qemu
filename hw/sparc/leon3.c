@@ -40,6 +40,8 @@
 #include "hw/loader.h"
 #include "elf.h"
 #include "trace.h"
+#include "exec/address-spaces.h"
+#include "include/net/net.h"
 
 #include "hw/sparc/grlib.h"
 #include "hw/misc/grlib_ahb_apb_pnp.h"
@@ -402,7 +404,9 @@ static void leon3_generic_hw_init(MachineState *machine)
                             LEON3_UART_IRQ, GRLIB_APBIO_AREA);
 
     /* Allocate greth */
+    qemu_check_nic_model(&nd_table[0], "grlib-greth");
     dev = qdev_new(TYPE_GRLIB_GRETH);
+    qdev_set_nic_properties(dev, &nd_table[0]);
     sysbus_realize_and_unref(SYS_BUS_DEVICE(dev), &error_fatal);
     sysbus_mmio_map(SYS_BUS_DEVICE(dev), 0, LEON3_GRETH_OFFSET);
     sysbus_connect_irq(SYS_BUS_DEVICE(dev), 0,
