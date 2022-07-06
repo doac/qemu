@@ -617,9 +617,6 @@ void cpu_set_cwp(CPUSPARCState *env1, int new_cwp);
 /* sun4m.c, sun4u.c */
 void cpu_check_irqs(CPUSPARCState *env);
 
-/* leon3.c */
-void leon3_irq_ack(void *irq_manager, int intno, int cpu_index);
-
 #if defined (TARGET_SPARC64)
 
 static inline int compare_masked(uint64_t x, uint64_t y, uint64_t mask)

@@ -36,7 +36,7 @@
 #include "hw/riscv/boot.h"
 #include "hw/riscv/numa.h"
 #include "hw/sparc/grlib.h"
-#include "hw/intc/sifive_clint.h"
+#include "hw/intc/riscv_aclint.h"
 #include "hw/intc/sifive_plic.h"
 #include "hw/qdev-properties.h"
 #include "qemu/datadir.h"
@@ -128,7 +128,7 @@ static void create_fdt(NoelState *s, const MemMapEntry *memmap,
 
     qemu_fdt_add_subnode(fdt, "/cpus");
     qemu_fdt_setprop_cell(fdt, "/cpus", "timebase-frequency",
-                          SIFIVE_CLINT_TIMEBASE_FREQ);
+                          RISCV_ACLINT_DEFAULT_TIMEBASE_FREQ);
     qemu_fdt_setprop_cell(fdt, "/cpus", "#size-cells", 0x0);
     qemu_fdt_setprop_cell(fdt, "/cpus", "#address-cells", 0x1);
 
@@ -386,7 +386,7 @@ static void noel_board_init(MachineState *machine)
         plic_hart_config_len -= (strlen(NOEL_PLIC_HART_CONFIG) + 1);
     }
     s->plic = sifive_plic_create(memmap[NOEL_PLIC].base,
-        plic_hart_config, 0,
+        plic_hart_config, smp_cpus, 0,
         NOEL_PLIC_NUM_SOURCES,
         NOEL_PLIC_NUM_PRIORITIES,
         NOEL_PLIC_PRIORITY_BASE,
@@ -397,10 +397,14 @@ static void noel_board_init(MachineState *machine)
         NOEL_PLIC_CONTEXT_STRIDE,
         memmap[NOEL_PLIC].size);
 
-    sifive_clint_create(memmap[NOEL_CLINT].base,
-        memmap[NOEL_CLINT].size, 0, smp_cpus,
-        SIFIVE_SIP_BASE, SIFIVE_TIMECMP_BASE, SIFIVE_TIME_BASE,
-        SIFIVE_CLINT_TIMEBASE_FREQ, false);
+    riscv_aclint_swi_create(memmap[NOEL_CLINT].base,
+                            0, smp_cpus, false);
+
+    riscv_aclint_mtimer_create(
+        memmap[NOEL_CLINT].base + RISCV_ACLINT_SWI_SIZE,
+        RISCV_ACLINT_DEFAULT_MTIMER_SIZE, 0, smp_cpus,
+        RISCV_ACLINT_DEFAULT_MTIMECMP, RISCV_ACLINT_DEFAULT_MTIME,
+        RISCV_ACLINT_DEFAULT_TIMEBASE_FREQ, false);
 
     /* Allocate uart */
     dev = qdev_new(TYPE_GRLIB_APB_UART);

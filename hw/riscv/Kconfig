@@ -87,6 +87,6 @@ config SPIKE
 
 config NOEL
     bool
-    select SIFIVE_CLINT
+    select RISCV_ACLINT
     select SIFIVE_PLIC
     select GRLIB
